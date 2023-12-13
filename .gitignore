@@ -24,3 +24,5 @@ dice_brew-*.tar
 
 # Temporary files, for example, from tests.
 /tmp/
+
+reference.ex
