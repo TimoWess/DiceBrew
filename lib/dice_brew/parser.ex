@@ -58,11 +58,11 @@ defmodule DiceBrew.Parser do
     sides = Integer.parse(sides) |> elem(0)
     sign = string_to_sign(sign)
 
-    update_roll_part(%RollPart{
+    %RollPart{
       amount: amount,
       sides: sides,
       sign: sign
-    })
+    }
   end
 
   @spec _parse([String.t()]) :: FixedPart.t()
@@ -123,19 +123,5 @@ defmodule DiceBrew.Parser do
   @spec apply_fixed_sign(fixed_part()) :: integer()
   defp apply_fixed_sign({:fixed, sign, value}) do
     if sign == :plus, do: value, else: -value
-  end
-
-  @spec update_roll_part(RollPart.t()) :: RollPart.t()
-  def update_roll_part(%RollPart{amount: amount, sides: sides, sign: sign} = roll_part) do
-    range =
-      case sign do
-        :plus -> 1..sides
-        :minus -> -1..-sides
-      end
-
-    tally = Enum.map(1..amount, fn _ -> Enum.random(range) end)
-    total = Enum.sum(tally)
-
-    %RollPart{roll_part | tally: tally, total: total}
   end
 end
