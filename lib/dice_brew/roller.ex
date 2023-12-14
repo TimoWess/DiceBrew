@@ -1,85 +1,63 @@
 defmodule DiceBrew.Roller do
+  alias DiceBrew.FixedPart
+  alias DiceBrew.RollPart
+  alias DiceBrew.Result
   alias DiceBrew.Parser
 
-  @spec roll!(Parser.dice_throw()) :: integer()
+  @spec roll!(Parser.dice_throw()) :: Result.t()
   def roll!(dice_throw) do
     parts = Parser.parse!(dice_throw)
     roll_value = reduce_roll_parts(parts)
     fixed_value = reduce_fixed_parts(parts)
-    roll_value + fixed_value
+    Result.new(total: roll_value + fixed_value, parts: parts)
   end
 
-  @spec roll(Parser.dice_throw()) :: {:error, String.t()} | {:ok, integer()}
+  @spec roll(Parser.dice_throw()) :: {:error, String.t()} | {:ok, Result.t()}
   def roll(dice_throw) do
-    {status, parts} = Parser.parse(dice_throw)
+    result = Parser.parse(dice_throw)
 
-    case status do
-      :error ->
-        {:error, parts}
+    case result do
+      {:error, message} ->
+        {:error, "Parsing error: #{message}"}
 
-      :ok ->
+      {:ok, parts} ->
         roll_value = reduce_roll_parts(parts)
         fixed_value = reduce_fixed_parts(parts)
-        {:ok, roll_value + fixed_value}
+        total = roll_value + fixed_value
+        {:ok, Result.new(total: total, parts: parts)}
     end
   end
 
-  @spec reduce_roll_parts([Parser.roll_part()]) :: integer()
+  @spec reduce_roll_parts([Parser.part()]) :: integer()
   defp reduce_roll_parts(parts) do
-    roll_parts = parts |> Enum.filter(&(elem(&1, 0) == :dice))
+    roll_parts = parts |> Enum.filter(&Parser.is_roll_part/1)
 
     roll_parts
-    |> Enum.reduce(0, fn {_, sign, amount, sides}, acc ->
-      case sign do
-        :plus ->
-          Enum.sum(Enum.map(1..amount, fn _ -> Enum.random(1..sides) end)) + acc
-
-        :minus ->
-          Enum.sum(Enum.map(1..amount, fn _ -> Enum.random(-1..-sides) end)) + acc
-      end
-    end)
+    |> Enum.reduce(0, fn %RollPart{total: total}, acc -> total + acc end)
   end
 
-  @spec reduce_fixed_parts([Parser.fixed_part()]) :: integer()
+  @spec reduce_fixed_parts([Parser.part()]) :: integer()
   defp reduce_fixed_parts(parts) do
-    fixed_parts = parts |> Enum.filter(&(elem(&1, 0) == :fixed))
+    fixed_parts = parts |> Enum.filter(&Parser.is_fixed_part/1)
 
     fixed_parts
-    |> Enum.reduce(0, fn {_, sign, value}, acc ->
-      case sign do
-        :plus ->
-          acc + value
-
-        :minus ->
-          acc - value
-      end
-    end)
+    |> Enum.reduce(0, fn %FixedPart{value: value}, acc -> acc + value end)
   end
 
-  @spec get_individual_results!(Parser.dice_throw()) :: {[[integer()]], integer()}
+  @spec get_individual_results!(Parser.dice_throw()) :: {[[integer()]], [integer()]}
   def get_individual_results!(dice_throw) when is_bitstring(dice_throw) do
     dice_throw |> Parser.parse!() |> get_individual_results()
   end
 
-  @spec get_individual_results([Parser.part()]) :: {[[integer()]], integer()}
+  @spec get_individual_results([Parser.part()]) :: {[[integer()]], [integer()]}
   def get_individual_results(parsed_throw) do
     dice =
-      Enum.filter(parsed_throw, fn e -> elem(e, 0) == :dice end)
-      |> Enum.map(fn {_, sign, amount, value} ->
-        case sign do
-          :plus -> Enum.map(1..amount, fn _ -> Enum.random(1..value) end)
-          :minus -> Enum.map(1..amount, fn _ -> Enum.random(-1..-value) end)
-        end
-      end)
+      Enum.filter(parsed_throw, &Parser.is_roll_part/1)
+      |> Enum.map(&RollPart.get_tally/1)
 
     fixed =
-      Enum.filter(parsed_throw, fn e -> elem(e, 0) == :fixed end)
-      |> Enum.reduce(0, fn {_, sign, value}, acc ->
-        case sign do
-          :plus -> acc + value
-          :minus -> acc - value
-        end
-      end)
+      Enum.filter(parsed_throw, &Parser.is_fixed_part/1)
+      |> Enum.map(&FixedPart.get_value/1)
 
     {dice, fixed}
   end

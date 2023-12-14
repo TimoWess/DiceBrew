@@ -1,25 +1,28 @@
 defmodule DiceBrew.Parser do
+  alias DiceBrew.RollPart
+  alias DiceBrew.FixedPart
+
   @notation_pattern ~r/^(([+-]?)(?:(\d+)d(\d+)|(\d+)))+$/
   @single_pattern ~r/(?<sign>[+-]?)(?:(?<amount>\d+)d(?<sides>\d+)|(?<fixed>\d+))/
 
   @type dice_throw() :: String.t()
   @type sign() :: :plus | :minus
-  @type roll_part() :: {:dice, sign(), non_neg_integer(), non_neg_integer()}
-  @type fixed_part() :: {:fixed, sign(), non_neg_integer()}
+  @type roll_part() :: RollPart.t()
+  @type fixed_part() :: FixedPart.t()
   @type part() :: roll_part() | fixed_part()
 
-  @spec get_sign(String.t()) :: sign()
-  defp get_sign(""), do: :plus
-  defp get_sign("+"), do: :plus
-  defp get_sign("-"), do: :minus
+  @spec string_to_sign(String.t()) :: sign()
+  defp string_to_sign(""), do: :plus
+  defp string_to_sign("+"), do: :plus
+  defp string_to_sign("-"), do: :minus
 
-  @spec is_dice_part(roll_part() | any()) :: boolean()
-  defp is_dice_part({:dice, _, _, _}), do: true
-  defp is_dice_part(_), do: false
+  @spec is_roll_part(roll_part() | any()) :: boolean()
+  def is_roll_part(%RollPart{}), do: true
+  def is_roll_part(_), do: false
 
   @spec is_fixed_part(fixed_part() | any()) :: boolean()
-  defp is_fixed_part({:fixed, _, _}), do: true
-  defp is_fixed_part(_), do: false
+  def is_fixed_part(%FixedPart{}), do: true
+  def is_fixed_part(_), do: false
 
   @spec sanitise_dice(dice_throw()) :: dice_throw()
   defp sanitise_dice(dice) do
@@ -49,21 +52,33 @@ defmodule DiceBrew.Parser do
     Regex.scan(@single_pattern, sanitized_dice) |> Enum.map(&_parse/1)
   end
 
-  @spec _parse([String.t()]) :: part()
-  defp _parse([_part, sign, amount, value]),
-    do: {
-      :dice,
-      get_sign(sign),
-      Integer.parse(amount) |> elem(0),
-      Integer.parse(value) |> elem(0)
-    }
+  @spec _parse([String.t()]) :: RollPart.t()
+  defp _parse([_part, sign, amount, sides]) do
+    amount = Integer.parse(amount) |> elem(0)
+    sides = Integer.parse(sides) |> elem(0)
+    sign = string_to_sign(sign)
 
-  @spec _parse([String.t()]) :: part()
+    update_roll_part(%RollPart{
+      amount: amount,
+      sides: sides,
+      sign: sign
+    })
+  end
+
+  @spec _parse([String.t()]) :: FixedPart.t()
   defp _parse([_part, sign, _, _, value]) do
-    {
-      :fixed,
-      get_sign(sign),
-      Integer.parse(value) |> elem(0)
+    sign = string_to_sign(sign)
+    num = Integer.parse(value) |> elem(0)
+
+    value =
+      case sign do
+        :plus -> num
+        :minus -> -num
+      end
+
+    %FixedPart{
+      value: value,
+      sign: sign
     }
   end
 
@@ -75,6 +90,7 @@ defmodule DiceBrew.Parser do
   @spec expand_parts(String.t()) :: {:ok, {[[[integer()]]], [integer()]}} | {:error, String.t()}
   def expand_parts(dice_throw) when is_bitstring(dice_throw) do
     result = parse(dice_throw)
+
     case result do
       {:error, message} -> {:error, "Parsing error: #{message}"}
       {:ok, parts} -> expand_parts(parts)
@@ -83,7 +99,7 @@ defmodule DiceBrew.Parser do
 
   @spec expand_parts([part()]) :: {:ok, {[[[integer()]]], [integer()]}}
   def expand_parts(parts) when is_list(parts) do
-    roll_parts = Enum.filter(parts, &is_dice_part/1)
+    roll_parts = Enum.filter(parts, &is_roll_part/1)
     fixed_parts = Enum.filter(parts, &is_fixed_part/1)
 
     expanded_rolls =
@@ -107,5 +123,19 @@ defmodule DiceBrew.Parser do
   @spec apply_fixed_sign(fixed_part()) :: integer()
   defp apply_fixed_sign({:fixed, sign, value}) do
     if sign == :plus, do: value, else: -value
+  end
+
+  @spec update_roll_part(RollPart.t()) :: RollPart.t()
+  def update_roll_part(%RollPart{amount: amount, sides: sides, sign: sign} = roll_part) do
+    range =
+      case sign do
+        :plus -> 1..sides
+        :minus -> -1..-sides
+      end
+
+    tally = Enum.map(1..amount, fn _ -> Enum.random(range) end)
+    total = Enum.sum(tally)
+
+    %RollPart{roll_part | tally: tally, total: total}
   end
 end
