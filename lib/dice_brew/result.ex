@@ -3,6 +3,8 @@ defmodule DiceBrew.Result do
 
   @type label :: String.t()
   @type parts :: [Parser.part()]
+  @type roll_parts :: [Parser.roll_part()]
+  @type fixed_parts :: [Parser.fixed_part()]
 
   @type t :: %__MODULE__{
           label: label(),
@@ -30,4 +32,10 @@ defmodule DiceBrew.Result do
 
   @spec get_parts(t()) :: parts()
   def get_parts(%__MODULE__{parts: parts}), do: parts
+
+  @spec get_roll_parts(t()) :: roll_parts()
+  def get_roll_parts(%__MODULE__{parts: parts}), do: Enum.filter(parts, &Parser.is_roll_part/1)
+
+  @spec get_fixed_parts(t()) :: fixed_parts()
+  def get_fixed_parts(%__MODULE__{parts: parts}), do: Enum.filter(parts, &Parser.is_fixed_part/1)
 end
