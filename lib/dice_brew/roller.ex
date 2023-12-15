@@ -7,9 +7,14 @@ defmodule DiceBrew.Roller do
 
   @spec roll!(Parser.dice_throw(), String.t()) :: Result.t()
   def roll!(dice_throw, label \\ "") do
+    # TODO: REWORK TO USE PART GROUP RESULTS
     parts =
       Parser.parse!(dice_throw)
-      |> Enum.map(fn e -> if Parser.is_roll_part(e), do: evaluate_roll_part(e), else: e end)
+      |> Enum.flat_map(fn parts ->
+        Enum.map(parts, fn e ->
+          if Parser.is_roll_part(e), do: evaluate_roll_part(e), else: e
+        end)
+      end)
 
     roll_value = reduce_roll_parts(parts)
     fixed_value = reduce_fixed_parts(parts)
@@ -24,10 +29,13 @@ defmodule DiceBrew.Roller do
       {:error, message} ->
         {:error, "Parsing error: #{message}"}
 
-      {:ok, parts} ->
+      {:ok, grouped_parts} ->
+        # TODO: REWORK TO USE PART GROUP RESULTS
         parts =
-          Enum.map(parts, fn e ->
-            if Parser.is_roll_part(e), do: evaluate_roll_part(e), else: e
+          Enum.flat_map(grouped_parts, fn parts ->
+            Enum.map(parts, fn e ->
+              if Parser.is_roll_part(e), do: evaluate_roll_part(e), else: e
+            end)
           end)
 
         roll_value = reduce_roll_parts(parts)
@@ -37,12 +45,16 @@ defmodule DiceBrew.Roller do
     end
   end
 
+  @spec evaluate_roll_part(Parser.roll_part()) :: Parser.roll_part()
   def evaluate_roll_part(roll_part) when is_struct(roll_part, RollPart) do
+    IO.puts("EVALUATING ROLL")
+
     roll_part
     |> apply_roll_part_options()
     |> update_total_with_exploding_series()
   end
 
+  @spec singular_roll(Parser.roll_part()) :: integer()
   defp singular_roll(%RollPart{sides: sides, sign: sign}) do
     range =
       case sign do
@@ -53,12 +65,14 @@ defmodule DiceBrew.Roller do
     Enum.random(range)
   end
 
+  @spec apply_roll_part_options(Parser.roll_part()) :: Parser.roll_part()
   defp apply_roll_part_options(roll_part) when is_struct(roll_part, RollPart) do
     roll_part
     |> apply_explode_and_reroll()
     |> apply_keep_and_drop()
   end
 
+  @spec apply_explode_and_reroll(Parser.roll_part()) :: Parser.roll_part()
   defp apply_explode_and_reroll(roll_part) when is_struct(roll_part, RollPart) do
     %RollOptions{
       explode: explode,
@@ -110,6 +124,7 @@ defmodule DiceBrew.Roller do
     if length(result.tally) == result.amount, do: result, else: apply_explode_and_reroll(result)
   end
 
+  @spec apply_keep_and_drop(Parser.roll_part()) :: Parser.roll_part()
   defp apply_keep_and_drop(roll_part) when is_struct(roll_part, RollPart) do
     %RollOptions{
       drop: drop,
@@ -137,6 +152,7 @@ defmodule DiceBrew.Roller do
     %RollPart{roll_part | tally: new_tally}
   end
 
+  @spec update_total_with_exploding_series(Parser.roll_part()) :: Parser.roll_part()
   defp update_total_with_exploding_series(
          %RollPart{tally: tally, exploding_series: exploding_series} = roll_part
        ) do
@@ -150,7 +166,7 @@ defmodule DiceBrew.Roller do
     roll_parts = parts |> Enum.filter(&Parser.is_roll_part/1)
 
     roll_parts
-    |> Enum.reduce(0, fn %RollPart{total: total}, acc -> total + acc end)
+    |> Enum.reduce(0, fn %RollPart{exploded_total: total}, acc -> total + acc end)
   end
 
   @spec reduce_fixed_parts([Parser.part()]) :: integer()

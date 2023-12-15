@@ -1,9 +1,12 @@
 defmodule DiceBrew.Parser do
+  alias DiceBrew.RollOptions
   alias DiceBrew.RollPart
   alias DiceBrew.FixedPart
 
-  @notation_pattern ~r/^(([+-]?)(?:(\d+)d(\d+)|(\d+)))+$/
-  @single_pattern ~r/(?<sign>[+-]?)(?:(?<amount>\d+)d(?<sides>\d+)|(?<fixed>\d+))/
+  @notation_pattern ~r/^((?:(?:[+-])?(?:(?:\d+[dD]\d+(?:(?:[X!](?:\d+)|[X!])?)|(?:\d+))))+(?:\[[\w\d\s_-]+\])?)+$/
+  @single_notation ~r/(?:(?:[+-])?(?:(?:\d+[dD]\d+(?:(?:[X!](?:\d+)|[X!])?)|(?:\d+))))+(?:\[[\w\d\s_-]+\])?/
+  @single_part ~r/(?:([+-])?(?:(?:(\d+)[dD](\d+)((?:[X!](\d+))|(?:[X!]))?)|(\d+)))/
+  @label ~r/\[[\w\d\s_-]+\]/
 
   @type dice_throw() :: String.t()
   @type sign() :: :plus | :minus
@@ -31,29 +34,40 @@ defmodule DiceBrew.Parser do
     |> String.replace(" ", "")
   end
 
-  @spec parse(dice_throw()) :: {:error, String.t()} | {:ok, [part()]}
+  @spec parse(dice_throw()) :: {:error, String.t()} | {:ok, [[part()]]}
   def parse(dice) do
-    sanitized_dice = sanitise_dice(dice)
+    # sanitized_dice = sanitise_dice(dice)
+    sanitized_dice = dice
 
     if Regex.scan(@notation_pattern, sanitized_dice) == [] do
       {:error, "Pattern does not match dice notation rules!"}
     else
-      {:ok, Regex.scan(@single_pattern, sanitized_dice) |> Enum.map(&_parse/1)}
+      {:ok, Regex.scan(@single_notation, sanitized_dice) |> Enum.map(&_parse/1)}
     end
   end
 
-  @spec parse!(dice_throw()) :: [part()]
+  @spec parse!(dice_throw()) :: [[part()]]
   def parse!(dice) do
-    sanitized_dice = sanitise_dice(dice)
+    # sanitized_dice = sanitise_dice(dice)
+    sanitized_dice = dice
 
     if Regex.scan(@notation_pattern, sanitized_dice) == [],
       do: raise(ArgumentError, "Pattern does not match dice notation rules!")
 
-    Regex.scan(@single_pattern, sanitized_dice) |> Enum.map(&_parse/1)
+    Regex.scan(@single_notation, sanitized_dice) |> Enum.map(&_parse/1)
   end
 
-  @spec _parse([String.t()]) :: RollPart.t()
-  defp _parse([_part, sign, amount, sides]) do
+  @spec _parse([String.t()]) :: [part()]
+  defp _parse([whole_part]) do
+    IO.inspect(whole_part)
+    label = Regex.run(@label, whole_part)
+
+    Regex.scan(@single_part, whole_part)
+    |> Enum.map(fn part -> convert_string_part_to_struct(part) |> apply_label(label) end)
+  end
+
+  @spec convert_string_part_to_struct([String.t()]) :: RollPart.t()
+  defp convert_string_part_to_struct([_part, sign, amount, sides]) do
     amount = Integer.parse(amount) |> elem(0)
     sides = Integer.parse(sides) |> elem(0)
     sign = string_to_sign(sign)
@@ -65,8 +79,24 @@ defmodule DiceBrew.Parser do
     }
   end
 
-  @spec _parse([String.t()]) :: FixedPart.t()
-  defp _parse([_part, sign, _, _, value]) do
+  @spec convert_string_part_to_struct([String.t()]) :: RollPart.t()
+  defp convert_string_part_to_struct([_part, sign, amount, sides, _explode]) do
+    amount = Integer.parse(amount) |> elem(0)
+    sides = Integer.parse(sides) |> elem(0)
+    sign = string_to_sign(sign)
+
+    options = %RollOptions{explode_indefinite: [sides]}
+
+    %RollPart{
+      amount: amount,
+      sides: sides,
+      sign: sign,
+      options: options
+    }
+  end
+
+  @spec convert_string_part_to_struct([String.t()]) :: RollPart.t()
+  defp convert_string_part_to_struct([_part, sign, "", "", "", "", value]) do
     sign = string_to_sign(sign)
     num = Integer.parse(value) |> elem(0)
 
@@ -80,6 +110,33 @@ defmodule DiceBrew.Parser do
       value: value,
       sign: sign
     }
+  end
+
+  @spec convert_string_part_to_struct([String.t()]) :: RollPart.t()
+  defp convert_string_part_to_struct([_part, sign, amount, sides, _explode, explode_value]) do
+    amount = Integer.parse(amount) |> elem(0)
+    sides = Integer.parse(sides) |> elem(0)
+    explode_value = Integer.parse(explode_value) |> elem(0)
+    sign = string_to_sign(sign)
+
+    options = %RollOptions{explode_indefinite: Enum.to_list(explode_value..sides)}
+
+    %RollPart{
+      amount: amount,
+      sides: sides,
+      sign: sign,
+      options: options
+    }
+  end
+
+  defp apply_label(%RollPart{} = roll_part, label) do
+    label = if label == nil, do: "", else: label
+    %RollPart{roll_part | label: label}
+  end
+
+  defp apply_label(%FixedPart{} = fixed_part, label) do
+    label = if label == nil, do: "", else: label
+    %FixedPart{fixed_part | label: label}
   end
 
   @spec expand_parts!(dice_throw()) :: {[[[integer()]]], [integer()]}
