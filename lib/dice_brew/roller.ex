@@ -12,9 +12,11 @@ defmodule DiceBrew.Roller do
     partial_results =
       Parser.parse!(dice_throw)
       |> Enum.map(fn {label, parts} ->
-        evaluated_group_parts = Enum.map(parts, fn e ->
-          if Parser.is_roll_part(e), do: evaluate_roll_part(e), else: e
-        end)
+        evaluated_group_parts =
+          Enum.map(parts, fn e ->
+            if Parser.is_roll_part(e), do: evaluate_roll_part(e), else: e
+          end)
+
         partial_roll_value = reduce_roll_parts(evaluated_group_parts)
         partial_fixed_value = reduce_fixed_parts(evaluated_group_parts)
         total = partial_roll_value + partial_fixed_value
@@ -37,9 +39,11 @@ defmodule DiceBrew.Roller do
         # TODO: REWORK TO USE PART GROUP RESULTS
         partial_results =
           Enum.map(grouped_parts, fn {label, parts} ->
-            evaluated_group_parts = Enum.map(parts, fn e ->
-              if Parser.is_roll_part(e), do: evaluate_roll_part(e), else: e
-            end)
+            evaluated_group_parts =
+              Enum.map(parts, fn e ->
+                if Parser.is_roll_part(e), do: evaluate_roll_part(e), else: e
+              end)
+
             partial_roll_value = reduce_roll_parts(evaluated_group_parts)
             partial_fixed_value = reduce_fixed_parts(evaluated_group_parts)
             total = partial_roll_value + partial_fixed_value

@@ -60,9 +60,12 @@ defmodule DiceBrew.Parser do
     label_match = Regex.run(@label, whole_part)
     label = if label_match == nil, do: "", else: hd(label_match)
 
-    parts = Regex.scan(@single_part, whole_part)
-    |> Enum.map(fn part -> convert_string_part_to_struct(part)
-    |> apply_label(label) end)
+    parts =
+      Regex.scan(@single_part, whole_part)
+      |> Enum.map(fn part ->
+        convert_string_part_to_struct(part)
+        |> apply_label(label)
+      end)
 
     {label, parts}
   end
