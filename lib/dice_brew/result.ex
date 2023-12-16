@@ -1,20 +1,19 @@
 defmodule DiceBrew.Result do
+  alias DiceBrew.PartialResult
   alias DiceBrew.Parser
 
   @type label :: String.t()
-  @type parts :: [Parser.part()]
-  @type roll_parts :: [Parser.roll_part()]
-  @type fixed_parts :: [Parser.fixed_part()]
+  @type partial_results :: [PartialResult.t()]
 
   @type t :: %__MODULE__{
           label: label(),
           total: integer(),
-          parts: parts()
+          partial_results: partial_results()
         }
 
-  defstruct label: "", total: 0, parts: []
+  defstruct label: "", total: 0, partial_results: []
 
-  @spec new(label: label(), total: integer(), parts: parts()) :: t()
+  @spec new(label: label(), total: integer(), partial_results: partial_results()) :: t()
   def new(options \\ []) do
     struct(%__MODULE__{}, options)
   end
@@ -30,12 +29,6 @@ defmodule DiceBrew.Result do
   @spec get_total(t()) :: integer()
   def get_total(%__MODULE__{total: total}), do: total
 
-  @spec get_parts(t()) :: parts()
-  def get_parts(%__MODULE__{parts: parts}), do: parts
-
-  @spec get_roll_parts(t()) :: roll_parts()
-  def get_roll_parts(%__MODULE__{parts: parts}), do: Enum.filter(parts, &Parser.is_roll_part/1)
-
-  @spec get_fixed_parts(t()) :: fixed_parts()
-  def get_fixed_parts(%__MODULE__{parts: parts}), do: Enum.filter(parts, &Parser.is_fixed_part/1)
+  @spec get_partial_results(t()) :: partial_results()
+  def get_partial_results(%__MODULE__{partial_results: parts}), do: parts
 end

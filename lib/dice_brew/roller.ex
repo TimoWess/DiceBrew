@@ -1,4 +1,5 @@
 defmodule DiceBrew.Roller do
+  alias DiceBrew.PartialResult
   alias DiceBrew.RollOptions
   alias DiceBrew.FixedPart
   alias DiceBrew.RollPart
@@ -8,17 +9,20 @@ defmodule DiceBrew.Roller do
   @spec roll!(Parser.dice_throw(), String.t()) :: Result.t()
   def roll!(dice_throw, label \\ "") do
     # TODO: REWORK TO USE PART GROUP RESULTS
-    parts =
+    partial_results =
       Parser.parse!(dice_throw)
-      |> Enum.flat_map(fn parts ->
-        Enum.map(parts, fn e ->
+      |> Enum.map(fn {label, parts} ->
+        evaluated_group_parts = Enum.map(parts, fn e ->
           if Parser.is_roll_part(e), do: evaluate_roll_part(e), else: e
         end)
+        partial_roll_value = reduce_roll_parts(evaluated_group_parts)
+        partial_fixed_value = reduce_fixed_parts(evaluated_group_parts)
+        total = partial_roll_value + partial_fixed_value
+        %PartialResult{total: total, parts: evaluated_group_parts, label: label}
       end)
 
-    roll_value = reduce_roll_parts(parts)
-    fixed_value = reduce_fixed_parts(parts)
-    %Result{total: roll_value + fixed_value, parts: parts, label: label}
+    total = total_up_results(partial_results)
+    %Result{total: total, partial_results: partial_results, label: label}
   end
 
   @spec roll(Parser.dice_throw(), String.t()) :: {:error, String.t()} | {:ok, Result.t()}
@@ -31,17 +35,19 @@ defmodule DiceBrew.Roller do
 
       {:ok, grouped_parts} ->
         # TODO: REWORK TO USE PART GROUP RESULTS
-        parts =
-          Enum.flat_map(grouped_parts, fn parts ->
-            Enum.map(parts, fn e ->
+        partial_results =
+          Enum.map(grouped_parts, fn {label, parts} ->
+            evaluated_group_parts = Enum.map(parts, fn e ->
               if Parser.is_roll_part(e), do: evaluate_roll_part(e), else: e
             end)
+            partial_roll_value = reduce_roll_parts(evaluated_group_parts)
+            partial_fixed_value = reduce_fixed_parts(evaluated_group_parts)
+            total = partial_roll_value + partial_fixed_value
+            %PartialResult{total: total, parts: evaluated_group_parts, label: label}
           end)
 
-        roll_value = reduce_roll_parts(parts)
-        fixed_value = reduce_fixed_parts(parts)
-        total = roll_value + fixed_value
-        {:ok, %Result{total: total, parts: parts, label: label}}
+        total = total_up_results(partial_results)
+        {:ok, %Result{total: total, partial_results: partial_results, label: label}}
     end
   end
 
@@ -217,5 +223,9 @@ defmodule DiceBrew.Roller do
       |> Enum.map(&FixedPart.get_value/1)
 
     {:ok, {rolls, fixed}}
+  end
+
+  defp total_up_results(results) do
+    Enum.reduce(results, 0, fn %PartialResult{total: total}, acc -> total + acc end)
   end
 end
