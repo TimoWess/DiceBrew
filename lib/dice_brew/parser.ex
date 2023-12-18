@@ -3,18 +3,18 @@ defmodule DiceBrew.Parser do
   alias DiceBrew.RollPart
   alias DiceBrew.FixedPart
 
-  import Regex, only: [source: 1]
+  import Regex, only: [source: 1, compile!: 1]
 
   @sign ~r/(?<sing>[+-])/
   @roll_part ~r/(?:(?<amount>\d+)?[dD](?<sides>\d+))/
   @fixed_part ~r/(?<fixed>\d+)/
   @explode ~r/(?:([X!])(?<explode_value>\d+)?)/
   @label ~r/(?<label>\[[\w\d\s_-]+\])/
-  @single_part Regex.compile!(
+  @single_part compile!(
                  "#{source(@sign)}?(?:(?:#{source(@roll_part)}#{source(@explode)}?)|#{source(@fixed_part)})"
                )
-  @single_notation Regex.compile!("(#{source(@single_part)})+#{source(@label)}?")
-  @notation_pattern Regex.compile!("^(#{source(@single_notation)})+$")
+  @single_notation compile!("(#{source(@single_part)})+#{source(@label)}?")
+  @notation_pattern compile!("^(#{source(@single_notation)})+$")
 
   @type dice_throw() :: String.t()
   @type sign() :: :plus | :minus
@@ -78,6 +78,7 @@ defmodule DiceBrew.Parser do
     {label, parts}
   end
 
+  # Most basic roll part (e.g. 2d6 or d8)
   @spec convert_string_part_to_struct([String.t()]) :: RollPart.t()
   defp convert_string_part_to_struct([_part, sign, amount, sides]) do
     amount = if amount == "", do: 1, else: Integer.parse(amount) |> elem(0)
@@ -91,6 +92,7 @@ defmodule DiceBrew.Parser do
     }
   end
 
+  # Any fixed part (e.g. 10 or -8)
   @spec convert_string_part_to_struct([String.t()]) :: RollPart.t()
   defp convert_string_part_to_struct([_part, sign, "", "", "", "", value]) do
     sign = string_to_sign(sign)
@@ -108,6 +110,7 @@ defmodule DiceBrew.Parser do
     }
   end
 
+  # Max value explode (e.g. 2d6X or d10!)
   @spec convert_string_part_to_struct([String.t()]) :: RollPart.t()
   defp convert_string_part_to_struct([_part, sign, amount, sides, _explode]) do
     amount = if amount == "", do: 1, else: Integer.parse(amount) |> elem(0)
@@ -124,6 +127,7 @@ defmodule DiceBrew.Parser do
     }
   end
 
+  # Explode <explode_value> to sides (e.g. 2d6X5 or d10!8)
   @spec convert_string_part_to_struct([String.t()]) :: RollPart.t()
   defp convert_string_part_to_struct([_part, sign, amount, sides, _explode, explode_value]) do
     amount = if amount == "", do: 1, else: Integer.parse(amount) |> elem(0)

@@ -8,13 +8,12 @@ defmodule DiceBrew.Roller do
 
   @spec roll!(Parser.dice_throw(), String.t()) :: Result.t()
   def roll!(dice_throw, label \\ "") do
-    # TODO: REWORK TO USE PART GROUP RESULTS
     partial_results =
       Parser.parse!(dice_throw)
       |> Enum.map(fn {label, parts} ->
         evaluated_group_parts =
           Enum.map(parts, fn e ->
-            if Parser.is_roll_part(e), do: evaluate_roll_part(e), else: e
+            evaluate_roll_part(e)
           end)
 
         partial_roll_value = reduce_roll_parts(evaluated_group_parts)
@@ -36,12 +35,11 @@ defmodule DiceBrew.Roller do
         {:error, "Parsing error: #{message}"}
 
       {:ok, grouped_parts} ->
-        # TODO: REWORK TO USE PART GROUP RESULTS
         partial_results =
           Enum.map(grouped_parts, fn {label, parts} ->
             evaluated_group_parts =
               Enum.map(parts, fn e ->
-                if Parser.is_roll_part(e), do: evaluate_roll_part(e), else: e
+                evaluate_roll_part(e)
               end)
 
             partial_roll_value = reduce_roll_parts(evaluated_group_parts)
@@ -62,6 +60,11 @@ defmodule DiceBrew.Roller do
     roll_part
     |> apply_roll_part_options()
     |> update_total_with_exploding_series()
+  end
+
+  @spec evaluate_roll_part(Parser.part()) :: Parser.part()
+  def evaluate_roll_part(part) do
+    part
   end
 
   @spec singular_roll(Parser.roll_part()) :: integer()
@@ -92,10 +95,11 @@ defmodule DiceBrew.Roller do
     } = roll_part.options
 
     rolled_value = singular_roll(roll_part)
+    absolute_rolled_value = abs(rolled_value)
 
     result =
       cond do
-        rolled_value in explode ->
+        absolute_rolled_value in explode ->
           IO.puts("Rolled: #{rolled_value} -> Single Explode")
 
           %RollPart{
@@ -104,11 +108,11 @@ defmodule DiceBrew.Roller do
               exploding_series: [rolled_value | roll_part.exploding_series]
           }
 
-        rolled_value in explode_indefinite ->
+        absolute_rolled_value in explode_indefinite ->
           IO.puts("Rolled: #{rolled_value} -> Indefinite Explode")
           %RollPart{roll_part | exploding_series: [rolled_value | roll_part.exploding_series]}
 
-        rolled_value in reroll ->
+        absolute_rolled_value in reroll ->
           IO.puts("Rolled: #{rolled_value} -> Single Reroll")
 
           %RollPart{
@@ -117,7 +121,7 @@ defmodule DiceBrew.Roller do
               reroll_count: roll_part.reroll_count + 1
           }
 
-        rolled_value in reroll_indefinite ->
+        absolute_rolled_value in reroll_indefinite ->
           IO.puts("Rolled: #{rolled_value} -> Indefinite Reroll")
           %RollPart{roll_part | reroll_count: roll_part.reroll_count + 1}
 
