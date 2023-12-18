@@ -3,10 +3,18 @@ defmodule DiceBrew.Parser do
   alias DiceBrew.RollPart
   alias DiceBrew.FixedPart
 
-  @notation_pattern ~r/^((?:(?:[+-])?(?:(?:\d+[dD]\d+(?:(?:[X!](?:\d+)|[X!])?)|(?:\d+))))+(?:\[[\w\d\s_-]+\])?)+$/
-  @single_notation ~r/(?:(?:[+-])?(?:(?:\d+[dD]\d+(?:(?:[X!](?:\d+)|[X!])?)|(?:\d+))))+(?:\[[\w\d\s_-]+\])?/
-  @single_part ~r/(?:([+-])?(?:(?:(\d+)[dD](\d+)((?:[X!](\d+))|(?:[X!]))?)|(\d+)))/
-  @label ~r/\[[\w\d\s_-]+\]/
+  import Regex, only: [source: 1]
+
+  @sign ~r/(?<sing>[+-])/
+  @roll_part ~r/(?:(?<amount>\d+)?[dD](?<sides>\d+))/
+  @fixed_part ~r/(?<fixed>\d+)/
+  @explode ~r/(?:([X!])(?<explode_value>\d+)?)/
+  @label ~r/(?<label>\[[\w\d\s_-]+\])/
+  @single_part Regex.compile!(
+                 "#{source(@sign)}?(?:(?:#{source(@roll_part)}#{source(@explode)}?)|#{source(@fixed_part)})"
+               )
+  @single_notation Regex.compile!("(#{source(@single_part)})+#{source(@label)}?")
+  @notation_pattern Regex.compile!("^(#{source(@single_notation)})+$")
 
   @type dice_throw() :: String.t()
   @type sign() :: :plus | :minus
@@ -56,14 +64,14 @@ defmodule DiceBrew.Parser do
   end
 
   @spec _parse([String.t()]) :: part_group()
-  defp _parse([whole_part]) do
+  defp _parse([whole_part | _xs]) do
     label_match = Regex.run(@label, whole_part)
     label = if label_match == nil, do: "", else: hd(label_match)
 
     parts =
       Regex.scan(@single_part, whole_part)
       |> Enum.map(fn part ->
-        convert_string_part_to_struct(part)
+        convert_string_part_to_struct(IO.inspect(part))
         |> apply_label(label)
       end)
 
@@ -72,7 +80,7 @@ defmodule DiceBrew.Parser do
 
   @spec convert_string_part_to_struct([String.t()]) :: RollPart.t()
   defp convert_string_part_to_struct([_part, sign, amount, sides]) do
-    amount = Integer.parse(amount) |> elem(0)
+    amount = if amount == "", do: 1, else: Integer.parse(amount) |> elem(0)
     sides = Integer.parse(sides) |> elem(0)
     sign = string_to_sign(sign)
 
@@ -80,22 +88,6 @@ defmodule DiceBrew.Parser do
       amount: amount,
       sides: sides,
       sign: sign
-    }
-  end
-
-  @spec convert_string_part_to_struct([String.t()]) :: RollPart.t()
-  defp convert_string_part_to_struct([_part, sign, amount, sides, _explode]) do
-    amount = Integer.parse(amount) |> elem(0)
-    sides = Integer.parse(sides) |> elem(0)
-    sign = string_to_sign(sign)
-
-    options = %RollOptions{explode_indefinite: [sides]}
-
-    %RollPart{
-      amount: amount,
-      sides: sides,
-      sign: sign,
-      options: options
     }
   end
 
@@ -117,8 +109,24 @@ defmodule DiceBrew.Parser do
   end
 
   @spec convert_string_part_to_struct([String.t()]) :: RollPart.t()
+  defp convert_string_part_to_struct([_part, sign, amount, sides, _explode]) do
+    amount = if amount == "", do: 1, else: Integer.parse(amount) |> elem(0)
+    sides = Integer.parse(sides) |> elem(0)
+    sign = string_to_sign(sign)
+
+    options = %RollOptions{explode_indefinite: [sides]}
+
+    %RollPart{
+      amount: amount,
+      sides: sides,
+      sign: sign,
+      options: options
+    }
+  end
+
+  @spec convert_string_part_to_struct([String.t()]) :: RollPart.t()
   defp convert_string_part_to_struct([_part, sign, amount, sides, _explode, explode_value]) do
-    amount = Integer.parse(amount) |> elem(0)
+    amount = if amount == "", do: 1, else: Integer.parse(amount) |> elem(0)
     sides = Integer.parse(sides) |> elem(0)
     explode_value = Integer.parse(explode_value) |> elem(0)
     sign = string_to_sign(sign)
