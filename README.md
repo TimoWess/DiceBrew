@@ -73,4 +73,9 @@ A roll part looks like this:
   reroll_count: 0
 }
 ```
-The additional options for rerolling and exploding dice are saved in the `RollOptions` struct and can be evaluated using the `Roller` module.
+The additional options for rerolling and exploding dice are saved in the `RollOptions` struct. All fields that are tied to rolling the part, like total, tally or exploding_series are evaluted using the`Roller` module.
+
+### Result and PartialResult
+
+The `roll` and `roll!` functions return a `DiceBrew.Result` struct that contains the total of the roll, an optional label and a List of `DiceBrew.PartialResult` structs that each contains information about each labeled part in the roll. The partial results have the same sturcture as the normal result except that they provide a list of parts instead of more partial results.
+Given the multiple optional values of the input for the parser, it opts not to retain the original input string alongside the rest of the data.
