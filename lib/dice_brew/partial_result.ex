@@ -14,11 +14,6 @@ defmodule DiceBrew.PartialResult do
 
   defstruct label: "", total: 0, parts: []
 
-  @spec new(label: label(), total: integer(), parts: parts()) :: t()
-  def new(options \\ []) do
-    struct(%__MODULE__{}, options)
-  end
-
   @spec to_struct(map()) :: t()
   def to_struct(map) do
     struct(__MODULE__, map)

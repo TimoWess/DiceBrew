@@ -1,6 +1,5 @@
 defmodule DiceBrew.Result do
   alias DiceBrew.PartialResult
-  alias DiceBrew.Parser
 
   @type label :: String.t()
   @type partial_results :: [PartialResult.t()]
@@ -12,11 +11,6 @@ defmodule DiceBrew.Result do
         }
 
   defstruct label: "", total: 0, partial_results: []
-
-  @spec new(label: label(), total: integer(), partial_results: partial_results()) :: t()
-  def new(options \\ []) do
-    struct(%__MODULE__{}, options)
-  end
 
   @spec to_struct(map()) :: t()
   def to_struct(map) do
