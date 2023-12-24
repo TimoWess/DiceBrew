@@ -55,8 +55,6 @@ defmodule DiceBrew.Roller do
 
   @spec evaluate_roll_part(Parser.roll_part()) :: Parser.roll_part()
   def evaluate_roll_part(roll_part) when is_struct(roll_part, RollPart) do
-    IO.puts("EVALUATING ROLL")
-
     roll_part
     |> apply_roll_part_options()
     |> update_total_with_exploding_series()
@@ -100,8 +98,6 @@ defmodule DiceBrew.Roller do
     result =
       cond do
         absolute_rolled_value in explode ->
-          IO.puts("Rolled: #{rolled_value} -> Single Explode")
-
           %RollPart{
             roll_part
             | options: %RollOptions{roll_part.options | explode: []},
@@ -109,12 +105,9 @@ defmodule DiceBrew.Roller do
           }
 
         absolute_rolled_value in explode_indefinite ->
-          IO.puts("Rolled: #{rolled_value} -> Indefinite Explode")
           %RollPart{roll_part | exploding_series: [rolled_value | roll_part.exploding_series]}
 
         absolute_rolled_value in reroll ->
-          IO.puts("Rolled: #{rolled_value} -> Single Reroll")
-
           %RollPart{
             roll_part
             | options: %RollOptions{roll_part.options | reroll: []},
@@ -122,12 +115,9 @@ defmodule DiceBrew.Roller do
           }
 
         absolute_rolled_value in reroll_indefinite ->
-          IO.puts("Rolled: #{rolled_value} -> Indefinite Reroll")
           %RollPart{roll_part | reroll_count: roll_part.reroll_count + 1}
 
         true ->
-          IO.puts("Rolled: #{rolled_value}")
-
           %RollPart{
             roll_part
             | tally: [rolled_value | roll_part.tally],

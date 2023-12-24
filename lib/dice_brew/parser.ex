@@ -71,7 +71,7 @@ defmodule DiceBrew.Parser do
     parts =
       Regex.scan(@single_part, whole_part)
       |> Enum.map(fn part ->
-        convert_string_part_to_struct(IO.inspect(part))
+        convert_string_part_to_struct(part)
         |> apply_label(label)
       end)
 

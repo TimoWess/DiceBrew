@@ -12,10 +12,6 @@ defmodule DiceBrew.StringBuilder do
     end
   end
 
-  def to_string(list) when is_list(list) do
-    "[#{list |> Enum.map(&Kernel.to_string/1) |> Enum.join(", ")}]"
-  end
-
   @spec to_string(RollPart.t()) :: String.t()
   def to_string(%RollPart{total: total}) do
     "#{total}"
@@ -33,7 +29,7 @@ defmodule DiceBrew.StringBuilder do
   end
 
   @spec to_string(Result.t()) :: String.t()
-  def to_string(%Result{label: label, total: total, partial_results: _partial_results}) do
-    "#{if label != "", do: "#{label}: "}#{total}"
+  def to_string(%Result{label: label, total: total, partial_results: partial_results}) do
+    "#{if label != "", do: "#{label}", else: "Result"}: #{total}\n#{Enum.map(partial_results, &__MODULE__.to_string/1) |> Enum.join("\n")}"
   end
 end
