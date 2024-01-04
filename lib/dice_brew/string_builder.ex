@@ -1,4 +1,5 @@
 defmodule DiceBrew.StringBuilder do
+  alias DiceBrew.RollOptions
   alias DiceBrew.RollPart
   alias DiceBrew.FixedPart
   alias DiceBrew.PartialResult
@@ -10,6 +11,22 @@ defmodule DiceBrew.StringBuilder do
       :minus -> "-"
       true -> sign
     end
+  end
+
+  @spec original_string(RollPart.t()) :: String.t()
+  def original_string(%RollPart{sides: sides, amount: amount, options: %RollOptions{explode_indefinite: explode_indefinite}}) do
+    ex =
+      case length(explode_indefinite) do
+        0 -> ""
+        1 -> "X"
+        _ -> "X#{abs(hd(explode_indefinite))}"
+      end
+    "#{amount}d#{sides}#{ex}"
+  end
+
+  @spec original_string(FixedPart.t()) :: String.t()
+  def original_string(%FixedPart{value: value}) do
+    "#{value}"
   end
 
   @spec to_string(RollPart.t()) :: String.t()
@@ -29,7 +46,7 @@ defmodule DiceBrew.StringBuilder do
   end
 
   @spec to_string(Result.t()) :: String.t()
-  def to_string(%Result{label: label, total: total, partial_results: partial_results}) do
-    "#{if label != "", do: "#{label}", else: "Result"}: #{total}\n#{Enum.map(partial_results, &__MODULE__.to_string/1) |> Enum.join("\n")}"
+  def to_string(%Result{label: label, total: total}) do
+    "#{if label != "", do: "#{label}", else: "Result"}: #{total}"
   end
 end

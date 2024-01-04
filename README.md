@@ -1,22 +1,5 @@
 # DiceBrew: A Dice Parsing and Rolling Library for Elixir
 
-## Installation
-
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed
-by adding `dice_brew` to your list of dependencies in `mix.exs`:
-
-```elixir
-def deps do
-  [
-    {:dice_brew, "~> 0.1.0"}
-  ]
-end
-```
-
-Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
-and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
-be found at <https://hexdocs.pm/dice_brew>.
-
 ## Usage
 
 The main two modules you'll want from this Library are `DiceBrew.Parser` and `DiceBrew.Roller` which provide parsing and rolling functionality respectively. They don't use macros so you can simply alias them like so:
@@ -78,4 +61,4 @@ The additional options for rerolling and exploding dice are saved in the `RollOp
 ### Result and PartialResult
 
 The `roll` and `roll!` functions return a `DiceBrew.Result` struct that contains the total of the roll, an optional label and a List of `DiceBrew.PartialResult` structs that each contains information about each labeled part in the roll. The partial results have the same sturcture as the normal result except that they provide a list of parts instead of more partial results.
-Given the multiple optional values of the input for the parser, it opts not to retain the original input string alongside the rest of the data.
+Given the multiple optional values of the input for the parser, it opts not to retain the original input string alongside the rest of the data. Instead, a uniformly formatted string can be generated using the `DiceBrew.StringBuilder` module.
