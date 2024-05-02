@@ -223,6 +223,7 @@ defmodule DiceBrew.Roller do
     {:ok, {rolls, fixed}}
   end
 
+  @spec total_up_results([PartialResult.t()]) :: integer()
   defp total_up_results(results) do
     Enum.reduce(results, 0, fn %PartialResult{total: total}, acc -> total + acc end)
   end

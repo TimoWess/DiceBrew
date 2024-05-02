@@ -14,13 +14,18 @@ defmodule DiceBrew.StringBuilder do
   end
 
   @spec original_string(RollPart.t()) :: String.t()
-  def original_string(%RollPart{sides: sides, amount: amount, options: %RollOptions{explode_indefinite: explode_indefinite}}) do
+  def original_string(%RollPart{
+        sides: sides,
+        amount: amount,
+        options: %RollOptions{explode_indefinite: explode_indefinite}
+      }) do
     ex =
       case length(explode_indefinite) do
         0 -> ""
         1 -> "X"
         _ -> "X#{abs(hd(explode_indefinite))}"
       end
+
     "#{amount}d#{sides}#{ex}"
   end
 

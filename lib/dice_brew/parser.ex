@@ -5,6 +5,7 @@ defmodule DiceBrew.Parser do
 
   import Regex, only: [source: 1, compile!: 1]
 
+  # Define all Regex Module Attributes for the parser
   @sign ~r/(?<sing>[+-])/
   @roll_part ~r/(?:(?<amount>\d+)?[dD](?<sides>\d+))/
   @fixed_part ~r/(?<fixed>\d+)/
