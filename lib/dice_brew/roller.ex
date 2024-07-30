@@ -181,20 +181,27 @@ defmodule DiceBrew.Roller do
     |> Enum.reduce(0, fn %FixedPart{value: value}, acc -> acc + value end)
   end
 
-  @spec get_individual_results!(Parser.dice_throw() | [Parser.part()]) ::
+  # TODO: Zip roll tallys and fixed values by section. Right now they are in two seperated lists
+  @spec get_individual_results!(Parser.dice_throw() | DiceBrew.Result.t()) ::
           {[[integer()]], [integer()]}
   def get_individual_results!(dice_throw) when is_bitstring(dice_throw) do
-    dice_throw |> Parser.parse!() |> get_individual_results!()
+    dice_throw |> DiceBrew.Roller.roll!() |> get_individual_results!()
   end
 
   def get_individual_results!(parsed_throw) do
     rolls =
-      Enum.filter(parsed_throw, &Parser.is_roll_part/1)
-      |> Enum.map(&RollPart.get_tally/1)
+      parsed_throw.partial_results
+      |> Enum.map(fn %DiceBrew.PartialResult{parts: parts} -> 
+        Enum.filter(parts, &Parser.is_roll_part/1)
+        |> Enum.map(&RollPart.get_tally/1)
+      end)
 
     fixed =
-      Enum.filter(parsed_throw, &Parser.is_fixed_part/1)
-      |> Enum.map(&FixedPart.get_value/1)
+      parsed_throw.partial_results
+      |> Enum.map(fn %DiceBrew.PartialResult{parts: parts} -> 
+        Enum.filter(parts, &Parser.is_fixed_part/1)
+        |> Enum.map(&FixedPart.get_value/1)
+      end)
 
     {rolls, fixed}
   end
@@ -213,14 +220,20 @@ defmodule DiceBrew.Roller do
   @spec get_individual_results([Parser.part()]) :: {[[integer()]], [integer()]}
   def get_individual_results(parsed_throw) do
     rolls =
-      Enum.filter(parsed_throw, &Parser.is_roll_part/1)
-      |> Enum.map(&RollPart.get_tally/1)
+      parsed_throw.partial_results
+      |> Enum.map(fn %DiceBrew.PartialResult{parts: parts} -> 
+        Enum.filter(parts, &Parser.is_roll_part/1)
+        |> Enum.map(&RollPart.get_tally/1)
+      end)
 
     fixed =
-      Enum.filter(parsed_throw, &Parser.is_fixed_part/1)
-      |> Enum.map(&FixedPart.get_value/1)
+      parsed_throw.partial_results
+      |> Enum.map(fn %DiceBrew.PartialResult{parts: parts} -> 
+        Enum.filter(parts, &Parser.is_fixed_part/1)
+        |> Enum.map(&FixedPart.get_value/1)
+      end)
 
-    {:ok, {rolls, fixed}}
+    {rolls, fixed}
   end
 
   @spec total_up_results([PartialResult.t()]) :: integer()
