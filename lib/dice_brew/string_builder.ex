@@ -30,8 +30,12 @@ defmodule DiceBrew.StringBuilder do
   end
 
   @spec original_string(FixedPart.t()) :: String.t()
-  def original_string(%FixedPart{value: value}) do
-    "#{value}"
+  def original_string(%FixedPart{value: value, sign: sign}) do
+    sign_string = case sign do
+      :plus -> "+"
+      :minus -> "-"
+    end
+    "#{sign_string}#{value}"
   end
 
   @spec to_string(RollPart.t()) :: String.t()

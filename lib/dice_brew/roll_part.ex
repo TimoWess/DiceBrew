@@ -28,4 +28,7 @@ defmodule DiceBrew.RollPart do
 
   @spec get_tally(t()) :: [integer()]
   def get_tally(%__MODULE__{tally: tally}), do: tally
+
+  @spec get_total(t()) :: integer()
+  def get_total(%__MODULE__{total: total}), do: total
 end

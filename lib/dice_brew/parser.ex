@@ -22,18 +22,19 @@ defmodule DiceBrew.Parser do
   @type roll_part() :: RollPart.t()
   @type fixed_part() :: FixedPart.t()
   @type part() :: roll_part() | fixed_part()
-  @type part_group() :: {String.t(), [part()]}
+  @type label() :: String.t()
+  @type part_group() :: {label(), [part()]}
 
   @spec string_to_sign(String.t()) :: sign()
   defp string_to_sign(""), do: :plus
   defp string_to_sign("+"), do: :plus
   defp string_to_sign("-"), do: :minus
 
-  @spec is_roll_part(roll_part() | any()) :: boolean()
+  @spec is_roll_part(roll_part() | fixed_part()) :: boolean()
   def is_roll_part(%RollPart{}), do: true
   def is_roll_part(_), do: false
 
-  @spec is_fixed_part(fixed_part() | any()) :: boolean()
+  @spec is_fixed_part(fixed_part() | roll_part()) :: boolean()
   def is_fixed_part(%FixedPart{}), do: true
   def is_fixed_part(_), do: false
 
@@ -80,7 +81,7 @@ defmodule DiceBrew.Parser do
   end
 
   # Most basic roll part (e.g. 2d6 or d8)
-  @spec convert_string_part_to_struct([String.t()]) :: RollPart.t()
+  @spec convert_string_part_to_struct([String.t()]) :: roll_part()
   defp convert_string_part_to_struct([_part, sign, amount, sides]) do
     amount = if amount == "", do: 1, else: Integer.parse(amount) |> elem(0)
     sides = Integer.parse(sides) |> elem(0)
@@ -94,7 +95,7 @@ defmodule DiceBrew.Parser do
   end
 
   # Any fixed part (e.g. 10 or -8)
-  @spec convert_string_part_to_struct([String.t()]) :: RollPart.t()
+  @spec convert_string_part_to_struct([String.t()]) :: fixed_part() 
   defp convert_string_part_to_struct([_part, sign, "", "", "", "", value]) do
     sign = string_to_sign(sign)
     num = Integer.parse(value) |> elem(0)
@@ -112,7 +113,7 @@ defmodule DiceBrew.Parser do
   end
 
   # Max value explode (e.g. 2d6X or d10!)
-  @spec convert_string_part_to_struct([String.t()]) :: RollPart.t()
+  @spec convert_string_part_to_struct([String.t()]) :: roll_part()
   defp convert_string_part_to_struct([_part, sign, amount, sides, _explode]) do
     amount = if amount == "", do: 1, else: Integer.parse(amount) |> elem(0)
     sides = Integer.parse(sides) |> elem(0)
@@ -129,7 +130,7 @@ defmodule DiceBrew.Parser do
   end
 
   # Explode <explode_value> to sides (e.g. 2d6X5 or d10!8)
-  @spec convert_string_part_to_struct([String.t()]) :: RollPart.t()
+  @spec convert_string_part_to_struct([String.t()]) :: roll_part()
   defp convert_string_part_to_struct([_part, sign, amount, sides, _explode, explode_value]) do
     amount = if amount == "", do: 1, else: Integer.parse(amount) |> elem(0)
     sides = Integer.parse(sides) |> elem(0)
@@ -146,12 +147,12 @@ defmodule DiceBrew.Parser do
     }
   end
 
-  @spec apply_label(RollPart.t(), String.t()) :: RollPart.t()
+  @spec apply_label(roll_part(), String.t()) :: roll_part()
   defp apply_label(%RollPart{} = roll_part, label) do
     %RollPart{roll_part | label: label}
   end
 
-  @spec apply_label(FixedPart.t(), String.t()) :: FixedPart.t()
+  @spec apply_label(fixed_part(), String.t()) :: fixed_part()
   defp apply_label(%FixedPart{} = fixed_part, label) do
     %FixedPart{fixed_part | label: label}
   end
