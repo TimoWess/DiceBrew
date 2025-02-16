@@ -44,6 +44,11 @@ defmodule DiceBrew.Parser do
     |> String.trim()
   end
 
+  @spec parse(<<>>) :: {:error, String.t()}
+  def parse("") do
+    {:error, "Empty string provided"}
+  end
+
   @spec parse(dice_throw()) :: {:error, String.t()} | {:ok, [part_group()]}
   def parse(dice) do
     sanitized_dice = sanitise_dice(dice)
